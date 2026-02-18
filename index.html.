@@ -1,1 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root { --mc: #ffd700; --sh: rgba(255, 215, 0, 0.4); --bg: #0b0b0b; }
+        
+        /* Убираем синее выделение при клике */
+        * { 
+            -webkit-tap-highlight-color: transparent; 
+            -webkit-touch-callout: none;
+            user-select: none;
+            box-sizing: border-box; 
+            outline: none; 
+        }
+
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; height: 100vh; }
+        
+        /* Эффекты */
+        .particle { position: absolute; top: -30px; z-index: -1; animation: fall linear infinite; pointer-events: none; }
+        @keyframes fall { to { transform: translateY(105vh) rotate(360deg); } }
+
+        /* Шапка */
+        .header { position: fixed; top: 0; width: 100%; height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; background: rgba(0,0,0,0.95); z-index: 100; border-bottom: 2px solid var(--mc); }
+        .icon-btn { font-size: 28px; cursor: pointer; color: var(--mc); }
+
+        /* Панели */
+        .panel { position: fixed; top: 0; left: -100%; width: 100%; height: 100%; background: var(--bg); z-index: 200; transition: 0.3s ease; padding: 70px 20px 20px; overflow-y: auto; }
+        .panel.active { left: 0; }
+        .sub-panel { display: none; flex-direction: column; align-items: center; width: 100%; }
+        .sub-panel.active { display: flex; }
+
+        /* Карточки и Кнопки */
+        .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 15px; margin-bottom: 10px; width: 100%; border-left: 4px solid var(--mc); }
+        .btn { background: var(--mc); color: #000; border: none; padding: 14px; border-radius: 12px; font-weight: 900; width: 100%; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn:active { transform: scale(0.96); opacity: 0.8; }
+        .inp { background: #1a1a1a; border: 1px solid var(--mc); color: #fff; padding: 14px; border-radius: 12px; width: 100%; margin: 10px 0; font-size: 16px; }
+
+        /* Сетка для выбора дизайна (Квадраты) */
+        .grid-select { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; margin: 15px 0; }
+        .sq-btn { aspect-ratio: 1/1; border-radius: 15px; border: 2px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .sq-btn:active { transform: scale(0.9); }
+
+        /* Главная */
+        .main-ui { height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .bal-display { font-size: 44px; font-weight: 900; margin: 10px 0; color: var(--mc); text-shadow: 0 0 15px var(--sh); }
+
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 10px 25px; border-radius: 25px; font-weight: 900; display: none; z-index: 2000; box-shadow: 0 5px 20px #000; }
+    </style>
+</head>
+<body>
+    <div id="toast"></div>
+
+    <div class="header">
+        <div class="icon-btn" onclick="openPanel('main-menu')">☰</div>
+        <div style="font-weight: 900; letter-spacing: 1px;">GOLD SHOP</div>
+        <div class="icon-btn" onclick="openPanel('settings')">⚙️</div>
+    </div>
+
+    <div class="main-ui">
+        <div style="opacity: 0.6; letter-spacing: 2px; font-size: 12px;">МОЙ БАЛАНС</div>
+        <div class="bal-display"><span id="bal-val">15.00</span> <span id="cur-val">UAH</span></div>
+        <button class="btn" style="width: 80%; font-size: 18px;" onclick="openPanel('shop')">📦 КАТЕГОРИИ</button>
+    </div>
+
+    <div id="main-menu" class="panel">
+        <div id="menu-home" class="sub-panel active">
+            <div class="card" onclick="showSub('profile')">👤 МОЙ ПРОФИЛЬ</div>
+            <div class="card" onclick="showSub('design')">🎨 ДИЗАЙН И ЭФФЕКТЫ</div>
+            <button class="btn" style="background: #222; color: #fff;" onclick="closePanels()">← НАЗАД</button>
+        </div>
+
+        <div id="profile" class="sub-panel">
+            <div class="card" style="text-align: center; border-left: none; border-bottom: 4px solid var(--mc);">
+                <h2 id="u-name" style="margin: 5px 0;">Игрок</h2>
+                <p style="opacity: 0.5; margin: 0;">ID: <span id="u-id">000000</span></p>
+            </div>
+            <div class="btn" onclick="showSub('promo')">🎁 ПРОМОКОДЫ</div>
+            <div class="btn" onclick="showSub('deposit')">💳 ПОПОЛНЕНИЕ</div>
+            <div class="btn" onclick="msg('Вывод доступен от 1000 голды')">💸 ВЫВОД СРЕДСТВ</div>
+            <div class="btn" onclick="changeCurrency()">🔄 СМЕНИТЬ ВАЛЮТУ</div>
+            <div class="btn" style="background:#444; color:#fff;" onclick="msg('Связь: @admin_shop')">🎧 ПОДДЕРЖКА</div>
+            <button class="btn" style="background: transparent; color: var(--mc);" onclick="showSub('menu-home')">← НАЗАД</button>
+        </div>
+
+        <div id="deposit" class="sub-panel">
+            <h3>ПОПОЛНЕНИЕ</h3>
+            <div class="card">Мин. сумма: 45 UAH / 100 RUB</div>
+            <input type="number" id="dep-amt" class="inp" placeholder="Введите сумму...">
+            <button class="btn" onclick="pay('CARD')">💳 КАРТА (ГРН/РУБ)</button>
+            <button class="btn" onclick="pay('CRYPTO')">💎 КРИПТОВАЛЮТА (TON)</button>
+            <button class="btn" style="background:none; color:#777" onclick="showSub('profile')">ОТМЕНА</button>
+        </div>
+
+        <div id="promo" class="sub-panel">
+            <h3>ПРОМОКОД</h3>
+            <input type="text" class="inp" placeholder="Введите код...">
+            <button class="btn" onclick="msg('Код неверный или истек')">АКТИВИРОВАТЬ</button>
+            <button class="btn" style="background:none; color:#777" onclick="showSub('profile')">НАЗАД</button>
+        </div>
+
+        <div id="design" class="sub-panel">
+            <h3>ЦВЕТА</h3>
+            <div class="grid-select">
+                <div class="sq-btn" style="background: #0066ff;" onclick="setT('#0066ff')"></div>
+                <div class="sq-btn" style="background: #ffffff;" onclick="setT('#ffffff')"></div>
+                <div class="sq-btn" style="background: #ff3333;" onclick="setT('#ff3333')"></div>
+                <div class="sq-btn" style="background: #22ff22;" onclick="setT('#22ff22')"></div>
+                <div class="sq-btn" style="background: #aa00ff;" onclick="setT('#aa00ff')"></div>
+                <div class="sq-btn" style="background: #ffd700;" onclick="setT('#ffd700')"></div>
+            </div>
+            <h3>ЭФФЕКТЫ</h3>
+            <div class="grid-select">
+                <div class="sq-btn" onclick="setE('🌸')">🌸</div>
+                <div class="sq-btn" onclick="setE('🍀')">🍀</div>
+                <div class="sq-btn" onclick="setE('💰')">💰</div>
+                <div class="sq-btn" onclick="setE('❄️')">❄️</div>
+                <div class="sq-btn" onclick="setE('⭐')">⭐</div>
+                <div class="sq-btn" onclick="stopE()">❌</div>
+            </div>
+            <button class="btn" style="background:#222; color:#fff" onclick="showSub('menu-home')">НАЗАД</button>
+        </div>
+    </div>
+
+    <div id="shop" class="panel">
+        <h2 style="text-align: center;">КАТЕГОРИИ</h2>
+        <div class="card" onclick="showSub('st2')">🔫 Standoff 2 (GOLD)</div>
+        <button class="btn" style="background:#222; color:#fff" onclick="closePanels()">← НАЗАД</button>
+
+        <div id="st2" class="sub-panel">
+            <div class="card">100 Голды <br> <small>Цена: 50 <span class="v-sm">UAH</span></small> <button class="btn" style="padding:5px; margin-top:5px;" onclick="msg('Пополните баланс')">КУПИТЬ</button></div>
+            <div class="card">500 Голды <br> <small>Цена: 240 <span class="v-sm">UAH</span></small> <button class="btn" style="padding:5px; margin-top:5px;" onclick="msg('Пополните баланс')">КУПИТЬ</button></div>
+            <div class="card">1000 Голды <br> <small>Цена: 450 <span class="v-sm">UAH</span></small> <button class="btn" style="padding:5px; margin-top:5px;" onclick="msg('Пополните баланс')">КУПИТЬ</button></div>
+            <button class="btn" style="background:none; color:#777" onclick="showSub('')">К КАТЕГОРИЯМ</button>
+        </div>
+    </div>
+
+    <div id="settings" class="panel">
+        <h3>НАСТРОЙКИ</h3>
+        <div class="card">ЯЗЫК: РУССКИЙ 🇷🇺</div>
+        <button class="btn" onclick="closePanels()">ЗАКРЫТЬ</button>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        let bal = 15.0; 
+        let cur = "UAH";
+        let effectInterval;
+
+        function update() {
+            document.getElementById('bal-val').innerText = bal.toFixed(2);
+            document.getElementById('cur-val').innerText = cur;
+            document.querySelectorAll('.v-sm').forEach(e => e.innerText = cur);
+        }
+
+        function msg(t) {
+            let b = document.getElementById('toast');
+            b.innerText = t; b.style.display = 'block';
+            setTimeout(() => b.style.display = 'none', 2000);
+        }
+
+        function openPanel(id) {
+            closePanels();
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closePanels() {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        }
+
+        function showSub(id) {
+            document.querySelectorAll('.sub-panel').forEach(s => s.classList.remove('active'));
+            if(id) document.getElementById(id).classList.add('active');
+        }
+
+        function changeCurrency() {
+            if(cur === "UAH") { cur = "RUB"; bal = bal * 2.2; }
+            else if(cur === "RUB") { cur = "TON"; bal = bal / 500; }
+            else { cur = "UAH"; bal = 15.0; }
+            update();
+            msg("Валюта: " + cur);
+        }
+
+        function setT(color) {
+            document.documentElement.style.setProperty('--mc', color);
+            msg("Стиль обновлен");
+        }
+
+        function setE(emoji) {
+            stopE();
+            effectInterval = setInterval(() => {
+                const p = document.createElement('div');
+                p.className = 'particle'; p.innerText = emoji;
+                p.style.left = Math.random() * 100 + 'vw';
+                p.style.fontSize = Math.random() * 20 + 15 + 'px';
+                p.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 4000);
+            }, 400);
+            msg("Эффект запущен");
+        }
+
+        function stopE() { if(effectInterval) clearInterval(effectInterval); }
+
+        function pay(type) {
+            let amt = document.getElementById('dep-amt').value;
+            if(!amt || amt < 45) return msg("Минимум 45 UAH / 100 RUB");
+            if(type === 'CRYPTO') {
+                prompt("Переведите TON на адрес (отправьте чек в ЛС):", "UQBXsDXoFMFD3752_K-87KOPztj5KbTrQq9irD32bUEAMQ3L");
+            } else {
+                msg("Создание счета...");
+            }
+        }
+
+        window.onload = () => {
+            document.getElementById('u-name').innerText = tg.initDataUnsafe.user?.first_name || "Игрок";
+            document.getElementById('u-id').innerText = tg.initDataUnsafe.user?.id || "654321";
+            tg.expand();
+            update();
+        };
+    </script>
+</body>
+</html>
 
